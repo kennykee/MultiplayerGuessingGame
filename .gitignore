@@ -1,0 +1,29 @@
+# Composer dependencies
+/vendor/
+
+# PHPUnit test result cache
+.phpunit.result.cache
+
+# Logs and reports
+*.log
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+
+# Environment and config
+.env
+.env.local
+.env.*
+
+# Archives and backups
+*.zip
+*.tar.gz
+*.bak
+*.tmp
