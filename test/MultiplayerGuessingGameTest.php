@@ -13,7 +13,7 @@ class MultiplayerGuessingGameTest extends TestCase
     protected function setUp(): void
     {
         $this->vocabularyChecker = new VocabularyCheckerImpl(); // Assuming this is a valid class
-        $this->game = new MultiplayerGuessingGameImpl($this->vocabularyChecker, ['apple', 'banana', 'cherry', 'date', 'elderberry']);
+        $this->game = new MultiplayerGuessingGameImpl($this->vocabularyChecker, ['apple', 'banan', 'cherr', 'datee', 'elder']);
 
         // Adding players for testing
         $this->game->addPlayer('Ali');
