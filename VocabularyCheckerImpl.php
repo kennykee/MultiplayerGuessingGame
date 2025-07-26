@@ -10,7 +10,9 @@ class VocabularyCheckerImpl implements VocabularyChecker
     //I used to think snake case is for variable but I checked PSR12 said use camelCase :D
     private array $validWords = [];
 
-    public function __construct() // The txt file is hardcoded. How about put the path in the constructor so can switch to different file when testing?
+    // The txt file is hardcoded. How about put the path in the constructor so can switch to different file when testing?
+    // There is a service container pattern getting popular, where you can do dependency injection into the constructor. CodeIgniter did this.
+    public function __construct()
     {
         try {
             $handle = fopen(__DIR__ . '/wordlist.txt', 'r', false);
@@ -24,8 +26,9 @@ class VocabularyCheckerImpl implements VocabularyChecker
             }
         } catch (Exception $e) {
             /* 
-            1) In test challenge, it's fine to echo it but I think the message should be logged in the logfile 
-            or piped to log server like New Relic or similar. error_log()
+            1) In production environment especially if we use auto scaling like kubernetes or auto scaling group, 
+            the log should best be routed to new relic or datadog or similar. Even if log into local log file, 
+            we won't know which app server node captures the error. In test challenge, it's fine to echo.
             2) Should we just terminate the execution with exit() since we can't load wordlist.txt?
              */
             echo $e->getMessage();
