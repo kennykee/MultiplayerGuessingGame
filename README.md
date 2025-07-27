@@ -24,6 +24,8 @@ In this challenge, I utilized VSCode Copilot, ChatGPT, and Google Search. These 
 
 2. Syntax and parameter for PHP functions like array_filter and fopen, helping me avoid unnecessary digging in PHP documentation.
 
+3. When I have multiple ways to write a block, I look for most recommended way to implement that block code.
+
 That said, the true differentiator remains your ability to understand the problem deeply and to craft your own solution intelligently. AI can accelerate routine tasks and surface suggestions, but the art of software engineering lies in designing solutions that are tailored to the unique challenges.
 
 Ultimately, it's not about if you use AI, but how you use these tools thoughtfully into your workflow to amplify your skills and productivity.

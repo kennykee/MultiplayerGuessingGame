@@ -1,7 +1,9 @@
 <?php
-
+require __DIR__ . '/vendor/autoload.php';
 require_once 'MultiplayerGuessingGame.php';
 require_once 'VocabularyCheckerImpl.php';
+
+use DI\ContainerBuilder;
 
 class MultiplayerGuessingGameImpl implements MultiplayerGuessingGame
 {
@@ -67,18 +69,19 @@ class MultiplayerGuessingGameImpl implements MultiplayerGuessingGame
         }
 
         /* 
-            Rule: To be valid the submission must have matching characters in all the revealed positions for at 
+            Rule: To be valid the submission, it must have matching characters in all the revealed positions for, at 
             least one partially revealed word that forms the game e.g. if a partially revealed word is p**g*a**** then 
             programmer is a valid player submission but protracted is not (there is a mismatch at the 4th character g <> t).
         */
 
         $validSubmission = false;
+
         foreach ($this->gameStrings as $index => $gameString) {
             $validSubmission = true; // Assume valid until proven otherwise
 
             for ($i = 0; $i < strlen($gameString); $i++) {
                 if ($gameString[$i] === '*') {
-                    continue; // Skip revealed characters
+                    continue; // Skip unrevealed characters
                 }
                 if ($gameString[$i] !== $word[$i]) {
                     $validSubmission = false; // Mismatch found
@@ -87,22 +90,28 @@ class MultiplayerGuessingGameImpl implements MultiplayerGuessingGame
             }
 
             if ($validSubmission) {
-                break; // Valid submission found, no need to check further
+                break; // At least 1 valid submission found, no need to check further
             }
+        }
 
-            /* As noted in section 3, a submission should NOT be validated against a fully revealed word. */
-            if ($gameString === $word) {
-                return;
-            }
+        /* As noted in section 3, a submission should NOT be validated against a fully revealed word. */
+        if (in_array($word, $this->gameStrings)) {
+            $validSubmission = false;
         }
 
         if ($this->vocabularyChecker->exists($word)) {
             $this->usedWords[] = $word;
 
+            /* If there is a direct match, skip looping */
+            /* IMPORTANT In the case of an exact match NO hidden characters in other words in the game should be revealed. */
+            if ($validSubmission  && in_array($word, $this->chosenWords)) {
+                $this->players[$playerName] += 10; // Exact match
+                $this->gameStrings[$index] = $word;
+                return;
+            }
+
             /* Calculate scores based on rules. Loop each gameStrings */
             foreach ($this->gameStrings as $index => $gameString) {
-
-                /* IMPORTANT In the case of an exact match NO hidden characters in other words in the game should be revealed. */
 
                 if (strpos($gameString, '*') !== false) {
                     $chosenWord = $this->chosenWords[$index];
@@ -128,12 +137,8 @@ class MultiplayerGuessingGameImpl implements MultiplayerGuessingGame
                          final e resulting in: *o*tn**e.
                        - Meaning get points only if valid submission but still update the game strings
                     */
-                    if ($validSubmission) {
-                        if ($revealedChars === $chosenWord) {
-                            $this->players[$playerName] += 10; // Exact match
-                        } else {
-                            $this->players[$playerName] += abs(substr_count($gameString, '*') - substr_count($revealedChars, '*')); // Count revealed characters 
-                        }
+                    if ($validSubmission === true) {
+                        $this->players[$playerName] += abs(substr_count($gameString, '*') - substr_count($revealedChars, '*')); // Count revealed characters 
                     }
                 }
             }
@@ -169,7 +174,7 @@ class MultiplayerGuessingGameImpl implements MultiplayerGuessingGame
     3. It simulates players guessing words until the game is over.
     4. It prints the game strings and player scores at the end.
 
-    Note: The score for each player will likely be low because the rule says that submission only valid if it matches the revealed characters.
+    Note: The score for each player will likely be very low because the rule says that submission only valid if it matches the revealed characters.
 
  ***********************/
 class Demo
@@ -190,7 +195,7 @@ class Demo
                 throw new Exception("Failed to open wordlist.txt");
             }
         } catch (Exception $e) {
-            /* Echoing the error message for convenience, but in production, this should be logged in log file */
+            /* Echoing the error message for convenience, but in production, this should be logged in server monitoring tools like NewRelic */
             echo $e->getMessage();
         }
 
@@ -202,33 +207,43 @@ class Demo
         /* array_flip to make words as keys, then array_rand to get 5 random keys */
         $randomWords = array_rand(array_flip($fixedLengthWords), $wordCount);
 
-        $gameInstance = new MultiplayerGuessingGameImpl(new VocabularyCheckerImpl(), $randomWords);
+        $containerBuilder = new ContainerBuilder();
+        $container = $containerBuilder->build();
+
+        //Since Azarina asked me to resubmit, then I just google php-DI and add it, although CI4.5 and Laravel comes prebuilt with it.
+        $gameServiceContainer = $container->make(MultiplayerGuessingGameImpl::class, [
+            'vocabularyChecker' => new VocabularyCheckerImpl(),
+            'chosenWords' => $randomWords
+        ]);
 
         /* Add players */
         $players = ['Ali', 'Abu', 'AhTan', 'AhKow', 'Muthu'];
         foreach ($players as $playerName) {
-            $gameInstance->addPlayer($playerName);
+            $gameServiceContainer->addPlayer($playerName);
         }
 
         /* simulate players guessing words */
-        while ($gameInstance->isGameOver() === false) {
+        while ($gameServiceContainer->isGameOver() === false) {
 
             /* Since the rule says it is NO turn rotation and anyone can submit as they like, so we just random choose 1 player. */
             $playerName = $players[array_rand($players)];
 
             /* Randomly choose a word from the chosen words */
             $randomWords = $words[array_rand($words)];
-            $gameInstance->submitGuess($playerName, $randomWords);
+            $gameServiceContainer->submitGuess($playerName, $randomWords);
 
             /* Print current game strings */
-            echo ($randomWords . " => " . implode(",", $gameInstance->getGameStrings()) . "\n");
+            echo ($randomWords . " => " . implode(",", $gameServiceContainer->getGameStrings()) . "\n");
         }
 
         echo "Game Over!\n";
-        print_r(implode(",", $gameInstance->getGameStrings()));
-        print_r($gameInstance->getPlayers());
+        print_r(implode(",", $gameServiceContainer->getGameStrings()));
+        print_r($gameServiceContainer->getPlayers());
     }
 }
 
 # Initialization
-Demo::main();
+# > php MultiplayerGuessingGameImpl.php
+if (__FILE__ === realpath($_SERVER['SCRIPT_FILENAME'])) { //Prevent running it when in unit test
+    Demo::main();
+}
